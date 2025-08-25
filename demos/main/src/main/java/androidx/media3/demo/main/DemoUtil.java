@@ -33,6 +33,7 @@ import androidx.media3.datasource.cache.NoOpCacheEvictor;
 import androidx.media3.datasource.cache.SimpleCache;
 import androidx.media3.datasource.cronet.CronetDataSource;
 import androidx.media3.datasource.cronet.CronetUtil;
+import androidx.media3.datasource.okhttp.OkHttpDataSource;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.RenderersFactory;
 import androidx.media3.exoplayer.offline.DownloadManager;
@@ -42,6 +43,8 @@ import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.util.concurrent.Executors;
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.chromium.net.CronetEngine;
 
@@ -55,6 +58,7 @@ public final class DemoUtil {
 
   private static DataSource.@MonotonicNonNull Factory dataSourceFactory;
   private static DataSource.@MonotonicNonNull Factory httpDataSourceFactory;
+  private static DataSource.@MonotonicNonNull Factory okHttpDataSourceFactory;
 
   @OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
   private static @MonotonicNonNull DatabaseProvider databaseProvider;
@@ -118,12 +122,29 @@ public final class DemoUtil {
     return httpDataSourceFactory;
   }
 
+  @OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
+  public static synchronized DataSource.Factory getOkHttpDataSourceFactory() {
+    if (okHttpDataSourceFactory != null) {
+      return okHttpDataSourceFactory;
+    }
+
+    HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
+    logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+    okHttpDataSourceFactory = new OkHttpDataSource.Factory(new OkHttpClient
+        .Builder()
+        .addInterceptor(logging)
+        .build()
+    );
+
+    return okHttpDataSourceFactory;
+  }
+
   /** Returns a {@link DataSource.Factory}. */
   public static synchronized DataSource.Factory getDataSourceFactory(Context context) {
     if (dataSourceFactory == null) {
       context = context.getApplicationContext();
       DefaultDataSource.Factory upstreamFactory =
-          new DefaultDataSource.Factory(context, getHttpDataSourceFactory(context));
+          new DefaultDataSource.Factory(context, getOkHttpDataSourceFactory());
       dataSourceFactory = buildReadOnlyCacheDataSource(upstreamFactory, getDownloadCache(context));
     }
     return dataSourceFactory;

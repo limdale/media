@@ -56,6 +56,8 @@ import androidx.media3.exoplayer.offline.DownloadRequest;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.exoplayer.source.ads.AdsLoader;
+import androidx.media3.exoplayer.upstream.BandwidthMeter;
+import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter;
 import androidx.media3.exoplayer.util.DebugTextViewHelper;
 import androidx.media3.exoplayer.util.EventLogger;
 import androidx.media3.ui.PlayerView;
@@ -271,6 +273,7 @@ public class PlayerActivity extends AppCompatActivity
       }
 
       lastSeenTracks = Tracks.EMPTY;
+      BandwidthMeter bandwidthMeter = DefaultBandwidthMeter.getSingletonInstance(this);
       ExoPlayer.Builder playerBuilder =
           new ExoPlayer.Builder(/* context= */ this)
               .setMediaSourceFactory(createMediaSourceFactory());
@@ -284,7 +287,7 @@ public class PlayerActivity extends AppCompatActivity
       player.setPlayWhenReady(startAutoPlay);
       playerView.setPlayer(player);
       configurePlayerWithServerSideAdsLoader();
-      debugViewHelper = new DebugTextViewHelper(player, debugTextView);
+      debugViewHelper = new DebugTextViewHelper(player, bandwidthMeter, debugTextView);
       debugViewHelper.start();
     }
     boolean haveStartPosition = startItemIndex != C.INDEX_UNSET;

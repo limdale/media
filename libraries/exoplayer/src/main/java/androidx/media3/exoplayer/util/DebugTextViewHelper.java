@@ -27,6 +27,7 @@ import androidx.media3.common.util.Assertions;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.DecoderCounters;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.upstream.BandwidthMeter;
 import java.util.Locale;
 
 /**
@@ -38,6 +39,7 @@ public class DebugTextViewHelper {
   private static final int REFRESH_INTERVAL_MS = 1000;
 
   private final ExoPlayer player;
+  private final BandwidthMeter bandwidthMeter;
   private final TextView textView;
   private final Updater updater;
 
@@ -49,9 +51,10 @@ public class DebugTextViewHelper {
    *     player.getApplicationLooper() == Looper.getMainLooper()}).
    * @param textView The {@link TextView} that should be updated to display the information.
    */
-  public DebugTextViewHelper(ExoPlayer player, TextView textView) {
+  public DebugTextViewHelper(ExoPlayer player, BandwidthMeter bandwidthMeter, TextView textView) {
     Assertions.checkArgument(player.getApplicationLooper() == Looper.getMainLooper());
     this.player = player;
+    this.bandwidthMeter = bandwidthMeter;
     this.textView = textView;
     this.updater = new Updater();
   }
@@ -95,7 +98,7 @@ public class DebugTextViewHelper {
   /** Returns the debugging information string to be shown by the target {@link TextView}. */
   @UnstableApi
   protected String getDebugString() {
-    return getPlayerStateString() + getVideoString() + getAudioString();
+    return getPlayerStateString() + getVideoString() + getAudioString() + getBandwidthString();
   }
 
   /** Returns a string containing player state debugging information. */
@@ -168,7 +171,7 @@ public class DebugTextViewHelper {
         + " ch:"
         + format.channelCount
         + getDecoderCountersBufferCountString(decoderCounters)
-        + ")";
+        + ")\n";
   }
 
   private static String getDecoderCountersBufferCountString(DecoderCounters counters) {
@@ -190,6 +193,22 @@ public class DebugTextViewHelper {
         + counters.maxConsecutiveDroppedBufferCount
         + " dk:"
         + counters.droppedToKeyframeCount;
+  }
+
+  private String getBandwidthString() {
+    long bandwidthEstimate = bandwidthMeter.getBitrateEstimate();
+    String readableBitrate = toReadableBitrate(bandwidthEstimate);
+    return "Bitrate Estimate: " + bandwidthEstimate + " (" + readableBitrate + ")\n";
+  }
+
+  private String toReadableBitrate(long bitrate) {
+    if (bitrate < 1000) {
+      return bitrate + " bps";
+    } else if (bitrate < 1000000) {
+      return String.format(Locale.US, "%.2f kbps", bitrate / 1000.0);
+    } else {
+      return String.format(Locale.US, "%.2f Mbps", bitrate / 1000000.0);
+    }
   }
 
   private static String getColorInfoString(@Nullable ColorInfo colorInfo) {
